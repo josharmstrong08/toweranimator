@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+<title>Tower Animator</title>
+</head>
+<link rel="stylesheet" href="css/smoothness/jquery-ui-1.10.1.custom.css" />
+<style>
+body {
+  font: 75% "Trebuchet MS", sans-serif;
+}
+.paneltitle {
+  font-size: 36px;
+  font-weight: bold;
+}
+#animationlist {
+  list-style-type: none;
+  margin-top: 10px;
+  padding-left: 0px;
+  height: 250px;
+  overflow: auto;
+}
+#animationlist li {
+  padding: 4px;
+  height: 18px;
+}
+#animationlist li .handle {
+  float: left;
+  padding: 3px;
+  cursor: pointer;
+}
+#playercontrols {
+  width: 300px;
+  height: 60px;
+  background: #333;
+  padding-top: 20px;
+  padding-left: 20px;
+  color: #fff;
+}
+#playbutton {
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  float: left;
+}
+#playbutton span.ui-icon {
+  margin: auto;
+  margin-top: 7px;
+}
+#currentanimationcontainer {
+  float: left;
+  padding-left: 10px;
+  width: 200px;
+}
+#currentanimationtitle {
+  height: 15px;
+  margin-top: -2px;
+  padding-bottom: 2px;
+}
+#currentanimationpos {
+  height: 15px;
+}
+.config-label {
+  text-align: right;
+  width: 140px;
+}
+.config-value {
+  padding-left: 20px;
+}
+#lagslider {
+  width: 200px;
+  float: left;
+}
+
+</style>
+<script src="js/jquery-1.9.1.js"></script>
+<script src="js/jquery-ui-1.10.1.custom.js"></script>
+<script>
+$(function() {
+  $("#animationlist")
+    .sortable({ handle: ".handle"})
+    .selectable({ 
+      tolerance: 'fit',
+      selected: function(e,u) { $(u.selected).addClass('ui-state-active'); },
+      unselected: function(e,u) { $(u.unselected).removeClass('ui-state-active'); }
+    })
+    .find("li")
+      .addClass("ui-corner-all")
+      .prepend("<div class='handle'><span class='ui-icon ui-icon-carat-2-n-s'></span></div>");
+  $("#playbutton")
+    .hover(
+      function() {
+        $(this).addClass("ui-state-hover");
+      },
+      function() {
+        $(this).removeClass("ui-state-hover");
+      }
+    )
+    .mousedown(function() {
+      $(this).addClass("ui-state-active");
+    })
+    .mouseup(function() {
+      $(this).removeClass("ui-state-active");
+    })
+  $("#currentanimationpos").progressbar({value: 20});
+  $("#tabs").tabs();
+  $("#lagslider").slider({value: [50]});
+  $("#pingbutton").button();
+});
+</script>
+</head>
+<body>
+<div id="tabs">
+  <ul>
+    <li><a href="#tabs-1">Animations</a></li>
+    <li><a href="#tabs-2">Configuration</a></li>
+  </ul>
+  <div id="tabs-1">
+    <span class="paneltitle">Animations</span>
+    <ul id="animationlist" class="ui-widget">
+      <li class="ui-state-default">Animation 1</li>
+      <li class="ui-state-default">Animation 2</li>
+      <li class="ui-state-default">Animation 3</li>
+      <li class="ui-state-default">Animation 1</li>
+      <li class="ui-state-default">Animation 2</li>
+      <li class="ui-state-default">Animation 3</li>
+      <li class="ui-state-default">Animation 1</li>
+      <li class="ui-state-default">Animation 2</li>
+      <li class="ui-state-default">Animation 3</li>
+    </ul> 
+    <div id="playercontrols" class="ui-corner-all ui-state-default">
+      <div id="playbutton" class="ui-corner-all ui-state-default"><span class="ui-icon ui-icon-play"></span></div>
+      <div id="currentanimationcontainer">
+        <div id="currentanimationtitle">Animation 1</div>
+        <div id="currentanimationpos"></div>
+      </div>
+    </div>
+  </div>
+  <div id="tabs-2">
+    <span class="paneltitle">Configuration</span>
+    <table id="configtable">
+    <tr>
+      <td class="config-label">Lag:</td>
+      <td class="config-value"><div id="lagslider"></div></td>
+   </tr><tr>
+      <td class="config-label">Ping Server:</td>
+      <td class="config-value"><button id="pingbutton">Ping</button></td>
+    </tr>
+    </table>
+  </div>
+</div>
+</body>
+</html>
