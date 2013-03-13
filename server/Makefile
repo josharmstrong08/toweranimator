@@ -1,7 +1,7 @@
 BIN = towerserver
 CC = gcc
-CFLAGS = -Wall -pthread
-CLIBS = -ldl
+CFLAGS = -Wall -pthread -DUSE_WEBSOCKET `pkg-config --cflags jansson` -ggdb
+CLIBS = -ldl `pkg-config --libs jansson`
 OBJS = mongoose.o
 
 all: $(BIN).c $(BIN).o $(OBJS)

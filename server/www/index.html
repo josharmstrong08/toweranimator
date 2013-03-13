@@ -1,4 +1,5 @@
 <!doctype html>
+<meta charset="utf-8" />  
 <html>
 <head>
 <title>Tower Animator</title>
@@ -70,12 +71,55 @@ body {
   width: 200px;
   float: left;
 }
-
+#pingdiv {
+  float: left;
+  margin-top: 9px;
+}
+#pingbutton {
+  float: left;
+}
+#refreshbutton {
+  float: right;
+  width: 20px;
+  height: 20px;
+  cursor: pointer; 
+}
 </style>
 <script src="js/jquery-1.9.1.js"></script>
 <script src="js/jquery-ui-1.10.1.custom.js"></script>
 <script>
 $(function() {
+  var url = "ws://" + window.location.host + "/";
+  websocket = new WebSocket(url);
+  websocket.onopen = function(ev) {
+    $("#serverstatus").text("Connected");
+  };
+  websocket.onclose = function(ev) {
+    $("#serverstatus").text("Disconnected");
+  };
+  websocket.onmessage = function(ev) {
+    alert(ev.data);
+    var msg = JSON.parse(ev.data);
+    switch (msg.type) {
+      case 'pong':
+        $("#pingdiv").text("Pong");
+        break;
+      case 'animationlist':
+        $("#animationlist").empty();
+        var length = msg.animations.length;
+        for (var i = 0; i < length; i++) {
+          $("#animationlist").append('<li class="ui-state-default ui-corner-all"><div class="handle"><span class="ui-icon ui-icon-carat-2-n-s"></span></div>' + msg.animations[i].title + '</li>');
+        }
+        break;
+      default:
+        alert('Unrecognized server message: ' + ev.data);
+        break;
+    }
+  };
+  websocket.onerror = function(ev) {
+    $("#serverstatus").text("Error: " + ev.data);
+  };
+
   $("#animationlist")
     .sortable({ handle: ".handle"})
     .selectable({ 
@@ -83,10 +127,10 @@ $(function() {
       selected: function(e,u) { $(u.selected).addClass('ui-state-active'); },
       unselected: function(e,u) { $(u.unselected).removeClass('ui-state-active'); }
     })
-    .find("li")
-      .addClass("ui-corner-all")
-      .prepend("<div class='handle'><span class='ui-icon ui-icon-carat-2-n-s'></span></div>");
-  $("#playbutton")
+    //.find("li")
+    //  .addClass("ui-corner-all")
+    //  .prepend("<div class='handle'><span class='ui-icon ui-icon-carat-2-n-s'></span></div>");
+  $("#playbutton, #refreshbutton")
     .hover(
       function() {
         $(this).addClass("ui-state-hover");
@@ -105,6 +149,14 @@ $(function() {
   $("#tabs").tabs();
   $("#lagslider").slider({value: [50]});
   $("#pingbutton").button();
+  $("#pingbutton").click(function() {
+    websocket.send(JSON.stringify({type:"ping"}));
+    $("#pingdiv").text("Ping...");
+  });
+  $("#refreshbutton").click(function() {
+    websocket.send(JSON.stringify({type:"getanimations"})); 
+    $("#animationlist").empty();
+  });
 });
 </script>
 </head>
@@ -116,17 +168,9 @@ $(function() {
   </ul>
   <div id="tabs-1">
     <span class="paneltitle">Animations</span>
-    <ul id="animationlist" class="ui-widget">
-      <li class="ui-state-default">Animation 1</li>
-      <li class="ui-state-default">Animation 2</li>
-      <li class="ui-state-default">Animation 3</li>
-      <li class="ui-state-default">Animation 1</li>
-      <li class="ui-state-default">Animation 2</li>
-      <li class="ui-state-default">Animation 3</li>
-      <li class="ui-state-default">Animation 1</li>
-      <li class="ui-state-default">Animation 2</li>
-      <li class="ui-state-default">Animation 3</li>
-    </ul> 
+    <div id="refreshbutton" class="ui-corner-all ui-state-default"><span class="ui-icon ui-icon-refresh"></span></div>
+    <div id="refreshbutton2"><span class="ui-icon ui-icon-refresh"></span></div>
+    <ul id="animationlist" class="ui-widget"></ul> 
     <div id="playercontrols" class="ui-corner-all ui-state-default">
       <div id="playbutton" class="ui-corner-all ui-state-default"><span class="ui-icon ui-icon-play"></span></div>
       <div id="currentanimationcontainer">
@@ -139,14 +183,21 @@ $(function() {
     <span class="paneltitle">Configuration</span>
     <table id="configtable">
     <tr>
+      <td class="config-label">Server Status:</td>
+      <td class="config-value"><div id="serverstatus"></div>Not connected</td>
+    </tr><tr>
       <td class="config-label">Lag:</td>
       <td class="config-value"><div id="lagslider"></div></td>
-   </tr><tr>
+    </tr><tr>
       <td class="config-label">Ping Server:</td>
-      <td class="config-value"><button id="pingbutton">Ping</button></td>
+      <td class="config-value">
+        <button id="pingbutton">Ping</button>
+        <div id="pingdiv"></div>
+      </td>
     </tr>
     </table>
   </div>
 </div>
 </body>
 </html>
+
