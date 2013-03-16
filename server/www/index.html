@@ -84,6 +84,7 @@ body {
   height: 20px;
   cursor: pointer; 
 }
+.ui-selectable-helper { display:none }
 </style>
 <script src="js/jquery-1.9.1.js"></script>
 <script src="js/jquery-ui-1.10.1.custom.js"></script>
@@ -98,7 +99,6 @@ $(function() {
     $("#serverstatus").text("Disconnected");
   };
   websocket.onmessage = function(ev) {
-    alert(ev.data);
     var msg = JSON.parse(ev.data);
     switch (msg.type) {
       case 'pong':
@@ -169,7 +169,6 @@ $(function() {
   <div id="tabs-1">
     <span class="paneltitle">Animations</span>
     <div id="refreshbutton" class="ui-corner-all ui-state-default"><span class="ui-icon ui-icon-refresh"></span></div>
-    <div id="refreshbutton2"><span class="ui-icon ui-icon-refresh"></span></div>
     <ul id="animationlist" class="ui-widget"></ul> 
     <div id="playercontrols" class="ui-corner-all ui-state-default">
       <div id="playbutton" class="ui-corner-all ui-state-default"><span class="ui-icon ui-icon-play"></span></div>
