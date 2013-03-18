@@ -12,7 +12,8 @@ static void send_message(struct mg_connection *conn, char *msg, size_t msg_len);
 static void tl_send_error(const char *errormsg, struct mg_connection *conn);
 static void tl_send_animationlist(struct mg_connection *conn);
 
-static char rootdir[512] = "/home/josh/Documents/Tower Lights Animations/";
+//static char rootdir[512] = "/home/josh/Documents/Tower Lights Animations/";
+static char rootdir[512] = "www/animations/";
 
 /**
  * Sends the list animatinos to the client.
@@ -65,7 +66,9 @@ static void tl_send_animationlist(struct mg_connection *conn) {
                 printf("  Error: multiple wav files in a directory\n");
               } else {
                 // printf("  wav file: %s\n", dp2->d_name);
-                json_object_set_new(animation, "music", json_string(dp2->d_name));
+                char musicfilename[1024];
+                snprintf(musicfilename, 1024, "animations\\%s\\%s", dp->d_name, dp2->d_name);
+                json_object_set_new(animation, "music", json_string(musicfilename));
               }
               foundwav = 1;
             } else if (strncmp((dp2->d_name + strlen(dp2->d_name) - 4), ".tan", 4) == 0) {
@@ -73,7 +76,9 @@ static void tl_send_animationlist(struct mg_connection *conn) {
                 printf("  Error: multiple tan files in a directory\n");
               } else {
                 // printf("  tan file: %s\n", dp2->d_name);
-                json_object_set_new(animation, "tan", json_string(dp2->d_name));
+                char tanfilename[1024];
+                snprintf(tanfilename, 1024, "animations\\%s\\%s", dp->d_name, dp2->d_name);
+                json_object_set_new(animation, "tan", json_string(tanfilename));
               }
               foundtan = 1;
             }
@@ -227,6 +232,12 @@ static int websocket_data_handler(struct mg_connection *conn, int flags, char *d
           tl_send_pong(conn);
         } else if (strncmp(msgtype, "getanimations", 13) == 0) {
           tl_send_animationlist(conn);
+        } else if (strncmp(msgtype, "play", 5) == 0) {
+          int animationindex = json_integer_value(json_object_get(root, "index"));
+          printf("Playing animation at index %i\n", animationindex);
+          //tl_play(conn, animationindex);
+        } else if (strncmp(msgtype, "stop", 5) == 0) {
+          printf("Stopping animation\n");
         } else {
           tl_send_error("Unrecognized Command", conn);
         }
