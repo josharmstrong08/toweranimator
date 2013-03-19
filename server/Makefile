@@ -1,10 +1,11 @@
 BIN = towerserver
 CC = gcc
 CFLAGS = -Wall -pthread -DUSE_WEBSOCKET `pkg-config --cflags jansson` -ggdb
-CLIBS = -ldl `pkg-config --libs jansson`
-OBJS = mongoose.o
+CLIBS = -ldl `pkg-config --libs jansson` -lwiringPi
+OBJS = mongoose.o driver.o
+SRCS = towerserver.c mongoose.c driver.c driver.h mongoose.h gamma.h
 
-all: $(BIN).c $(BIN).o $(OBJS)
+all: $(BIN).c $(BIN).o $(OBJS) $(SRCS)
 	$(CC) $(CFLAGS) -o $(BIN) $(BIN).o $(OBJS) $(CLIBS)
 
 clean:

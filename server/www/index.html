@@ -91,11 +91,43 @@ body {
 <script>
 $(function() {
   var websocket = new WebSocket("ws://" + window.location.host + "/");
-  var animations;
+  var animations = [];
+  var isAudioDoneLoading = false;
+  var isVideoDoneLoading = false;
   var readyToPlay = false;
   var playing = false;
-  var currentAnimation;
+  var currentAnimation = null;
   var currentIndex = false;
+
+  var animationDoneLoading = function() {
+    $("#currentanimationtitle").text(currentAnimation.title);
+
+    if (isAudioDoneLoading == true && isVideoDoneLoading == true) {
+      readyToPlay = true;
+      $("#playbutton").removeClass('ui-state-disabled');
+      $("#currentanimationpos").progressbar('option', 'max', $("#audioplayer")[0].duration);
+      $("#currentanimationpos").progressbar('value', 0);
+    } else {
+      $("#currentanimationpos").progressbar('value', false);
+      $("#playbutton span").removeClass('ui-icon-stop');
+      $("#playbutton span").addClass('ui-icon-play');
+      $("#playbutton").addClass("ui-state-disabled");
+      //playing = false;
+    }
+  }
+
+  /** 
+   * Initialize the audio and video loading
+   */
+  var loadAnimation = function(index) {
+    //playing = false;
+    currentAnimation = animations[index];
+    isAudioDoneLoading = false;
+    isVideoDoneLoading = false;
+    websocket.send(JSON.stringify({type:"load", index: animations.indexOf(currentAnimation)}));
+    $('#audioplayer').attr('src', currentAnimation.music);
+    $('#audioplayer')[0].load();
+  };
   
   // Websocket ----------------------------------------------------------
   websocket.onopen = function(ev) {
@@ -123,6 +155,10 @@ $(function() {
       case 'error':
         alert("Server error: " + msg.message);
         break;
+      case 'doneloading':
+        isVideoDoneLoading = true;
+        animationDoneLoading(); 
+        break;
       default:
         alert('Unrecognized server message: ' + ev.data);
         break;
@@ -130,22 +166,10 @@ $(function() {
   };
   websocket.onerror = function(ev) {
     $("#serverstatus").text("Error: " + ev.data);
+    alert("Websocket error: " + ev.data);
   };
 
   // Animation list -----------------------------------------------
-  var loadAnimation = function(index) {
-    currentAnimation = animations[index];
-    $("#currentanimationpos").progressbar('value', false);
-    $("#playbutton span").removeClass('ui-icon-stop');
-    $("#playbutton span").addClass('ui-icon-play');
-    $("#playbutton").addClass("ui-state-disabled");
-    $("#audioplayer").attr("src", currentAnimation.music);
-    $("#audioplayer")[0].load();
-    $("#currentanimationtitle").text(currentAnimation.title);
-    readyToPlay = false;
-    playing = false;
-  };
-
   $("#animationlist")
     .sortable({ handle: ".handle"})
     .selectable({ 
@@ -175,20 +199,18 @@ $(function() {
     });
 
   // Audio player---------------------------------------------------
+  // Send the play signal to the server when the audio starts playing
   $("#audioplayer").bind('play', function() { 
-    //alert('Play'); 
     console.log("play " + animations.indexOf(currentAnimation));
     websocket.send(JSON.stringify({type:"play", index: animations.indexOf(currentAnimation)}));
   });
+  // Catch when the audio is done loading
   $("#audioplayer").bind('canplaythrough', function() { 
-    readyToPlay = true;
-    $("#playbutton").removeClass('ui-state-disabled');
-    $("#currentanimationpos").progressbar('option', 'max', $("#audioplayer")[0].duration);
-    $("#currentanimationpos").progressbar('value', 0);
-    console.log("Can play through");
+    isAudioDoneLoading = true;
+    console.log("Audio can play through");
+    animationDoneLoading();
   });
   $("#audioplayer").bind('timeupdate', function() {
-    //$("#currentanimationpos").progressbar('option', {value: $("#audioplayer")[0].currentTime});
     $("#currentanimationpos").progressbar('value', $("#audioplayer")[0].currentTime);
   });
   $("#playbutton")
@@ -198,9 +220,7 @@ $(function() {
           $(this).addClass("ui-state-hover");
         }
       },
-      function() {
-        $(this).removeClass("ui-state-hover");
-      }
+      function() { $(this).removeClass("ui-state-hover"); }
     )
     .mousedown(function() {
       if (readyToPlay) {

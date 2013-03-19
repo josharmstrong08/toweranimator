@@ -7,16 +7,61 @@
 #include <dirent.h>
 #include <jansson.h>
 #include "mongoose.h"
+#include "driver.h"
 
 static void send_message(struct mg_connection *conn, char *msg, size_t msg_len);
 static void tl_send_error(const char *errormsg, struct mg_connection *conn);
 static void tl_send_animationlist(struct mg_connection *conn);
 
-//static char rootdir[512] = "/home/josh/Documents/Tower Lights Animations/";
+typedef struct {
+  char *tanfile;
+  char *musicfile;
+  char *title;
+} animation_t;
+
 static char rootdir[512] = "www/animations/";
+static animation_t *animations = NULL;
+static int animationcount = 0;
+
+static void tl_play(struct mg_connection *conn, int animationindex) {
+  if (animationindex >= animationcount) {
+    printf("Animation index %i out of bounds!\n", animationindex);
+    return;
+  }
+
+  leds_play();
+}
 
 /**
- * Sends the list animatinos to the client.
+ * Loads the specified animation into memory
+ */
+static void tl_load(struct mg_connection *conn, int animationindex) {
+  if (animationcount == 0) {
+    printf("Error: can't load an animation if the animation list hasn't been enumerated\n");
+  } 
+
+  int i;
+  for (i = 0; i < animationcount; i++) {
+    printf("%s\n  wav:\"%s\"\n  tan:\"%s\"\n", animations[i].title, animations[i].musicfile, animations[i].tanfile);
+  }
+
+  char filename[1024];
+  snprintf(filename, 1024, "www/%s", animations[animationindex].tanfile);
+  if (leds_openAnimation(filename) != 0) {
+    tl_send_error("Error opening animation file", conn);
+    printf("Error opening animation file \"%s\" (%s)\n", filename, animations[animationindex].tanfile);
+    return;
+  }
+
+  json_t *root = json_pack("{s:s}", "type", "doneloading");
+  char *msg = json_dumps(root, 0);
+
+  send_message(conn, msg, strlen(msg));
+  json_decref(root); 
+}
+
+/**
+ * Rebuilds the animation list and sends it to the client.
  */
 static void tl_send_animationlist(struct mg_connection *conn) {
   json_t *root;
@@ -26,6 +71,7 @@ static void tl_send_animationlist(struct mg_connection *conn) {
   root = json_object();
   json_object_set_new(root, "type", json_string("animationlist"));
   array = json_array(); 
+  free(animations);
 
   // Goal: Each folder in the specified animations folder holds an animation and it's music. 
   // Enumerate all the animations their music files
@@ -44,10 +90,18 @@ static void tl_send_animationlist(struct mg_connection *conn) {
     if (dp->d_type == DT_DIR) {
       if (strncmp(dp->d_name, ".", 1) != 0 &&
           strncmp(dp->d_name, "..", 2) != 0) {
+        animationcount++;
+        animations = realloc(animations, animationcount * sizeof(animation_t));
+        if (animations == NULL) {
+          printf("Realloc failed while initializing %i length array\n", animationcount);
+          return;
+        }
+
         json_t *animation = json_object();       
         json_object_set_new(animation, "title", json_string(dp->d_name));
   
         printf("Animation title: %s\n", dp->d_name); 
+        animations[animationcount-1].title = strndup(dp->d_name, 1024);
 
         char newdir[100]; 
         strncpy(newdir, rootdir, 100);
@@ -67,8 +121,9 @@ static void tl_send_animationlist(struct mg_connection *conn) {
               } else {
                 // printf("  wav file: %s\n", dp2->d_name);
                 char musicfilename[1024];
-                snprintf(musicfilename, 1024, "animations\\%s\\%s", dp->d_name, dp2->d_name);
+                snprintf(musicfilename, 1024, "animations/%s/%s", dp->d_name, dp2->d_name);
                 json_object_set_new(animation, "music", json_string(musicfilename));
+                animations[animationcount-1].musicfile = strndup(musicfilename, 1024);
               }
               foundwav = 1;
             } else if (strncmp((dp2->d_name + strlen(dp2->d_name) - 4), ".tan", 4) == 0) {
@@ -77,8 +132,9 @@ static void tl_send_animationlist(struct mg_connection *conn) {
               } else {
                 // printf("  tan file: %s\n", dp2->d_name);
                 char tanfilename[1024];
-                snprintf(tanfilename, 1024, "animations\\%s\\%s", dp->d_name, dp2->d_name);
+                snprintf(tanfilename, 1024, "animations/%s/%s", dp->d_name, dp2->d_name);
                 json_object_set_new(animation, "tan", json_string(tanfilename));
+                animations[animationcount-1].tanfile = strndup(tanfilename, 1024);
               }
               foundtan = 1;
             }
@@ -229,15 +285,21 @@ static int websocket_data_handler(struct mg_connection *conn, int flags, char *d
         const char *msgtype = json_string_value(type);
 
         if (strncmp(msgtype, "ping", 5) == 0) {
+          printf("Responding to ping\n");
           tl_send_pong(conn);
         } else if (strncmp(msgtype, "getanimations", 13) == 0) {
+          printf("Building and sending animation list\n");
           tl_send_animationlist(conn);
         } else if (strncmp(msgtype, "play", 5) == 0) {
           int animationindex = json_integer_value(json_object_get(root, "index"));
           printf("Playing animation at index %i\n", animationindex);
-          //tl_play(conn, animationindex);
+          tl_play(conn, animationindex);
         } else if (strncmp(msgtype, "stop", 5) == 0) {
           printf("Stopping animation\n");
+        } else if (strncmp(msgtype, "load", 5) == 0) {
+          int animationindex = json_integer_value(json_object_get(root, "index"));
+          printf("Loading animation at index %i\n", animationindex);
+          tl_load(conn, animationindex);
         } else {
           tl_send_error("Unrecognized Command", conn);
         }
@@ -266,12 +328,16 @@ int main(void) {
   callbacks.websocket_ready = websocket_ready_handler;
   // Handle the data callback
   callbacks.websocket_data = websocket_data_handler;
+  // Set up the hardware driver
+  leds_setup();
   // Start the server
   ctx = mg_start(&callbacks, NULL, options);
   // Wait until user hits "enter"
   getchar();  
   // Stop the server
   mg_stop(ctx);
+  
+  free(animations);
 
   return 0;
 }
