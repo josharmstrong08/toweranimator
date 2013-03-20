@@ -5,92 +5,17 @@
 <title>Tower Animator</title>
 </head>
 <link rel="stylesheet" href="css/smoothness/jquery-ui-1.10.1.custom.css" />
-<style>
-body {
-  font: 75% "Trebuchet MS", sans-serif;
-}
-.paneltitle {
-  font-size: 36px;
-  font-weight: bold;
-}
-#animationlist {
-  list-style-type: none;
-  margin-top: 10px;
-  padding-left: 0px;
-  height: 250px;
-  overflow: auto;
-}
-#animationlist li {
-  padding: 4px;
-  height: 18px;
-}
-#animationlist li .handle {
-  float: left;
-  padding: 3px;
-  cursor: pointer;
-}
-#playercontrols {
-  width: 300px;
-  height: 60px;
-  background: #333;
-  padding-top: 20px;
-  padding-left: 20px;
-  color: #fff;
-}
-#playbutton {
-  cursor: pointer;
-  width: 30px;
-  height: 30px;
-  float: left;
-}
-#playbutton span.ui-icon {
-  margin: auto;
-  margin-top: 7px;
-}
-#currentanimationcontainer {
-  float: left;
-  padding-left: 10px;
-  width: 200px;
-}
-#currentanimationtitle {
-  height: 15px;
-  margin-top: -2px;
-  padding-bottom: 2px;
-}
-#currentanimationpos {
-  height: 15px;
-}
-.config-label {
-  text-align: right;
-  width: 140px;
-}
-.config-value {
-  padding-left: 20px;
-}
-#lagslider {
-  width: 200px;
-  float: left;
-}
-#pingdiv {
-  float: left;
-  margin-top: 9px;
-}
-#pingbutton {
-  float: left;
-}
-#refreshbutton {
-  float: right;
-  width: 20px;
-  height: 20px;
-  cursor: pointer; 
-}
-.ui-selectable-helper { display:none }
-</style>
+<link rel="stylesheet" type="text/css" href="css/index.css">
 <script src="js/jquery-1.9.1.js"></script>
 <script src="js/jquery-ui-1.10.1.custom.js"></script>
 <script>
 $(function() {
-  var websocket = new WebSocket("ws://" + window.location.host + "/");
+  var websocket;
+  try {
+    websocket = new WebSocket("ws://" + window.location.host + "/");
+  } catch (e) {
+    alert("Unable to connect to ws://" + window.location.host + "/");
+  }
   var animations = [];
   var isAudioDoneLoading = false;
   var isVideoDoneLoading = false;
@@ -99,6 +24,10 @@ $(function() {
   var currentAnimation = null;
   var currentIndex = false;
 
+  /**
+   * Called when the audio or video is done loading, and if
+   * both are done then enables the play button.
+   */
   var animationDoneLoading = function() {
     $("#currentanimationtitle").text(currentAnimation.title);
 
@@ -183,9 +112,6 @@ $(function() {
       },
       unselected: function(e,u) { $(u.unselected).removeClass('ui-state-active'); }
     })
-    //.find("li")
-    //  .addClass("ui-corner-all")
-    //  .prepend("<div class='handle'><span class='ui-icon ui-icon-carat-2-n-s'></span></div>");
   $("#refreshbutton")
     .hover(
       function() { $(this).addClass("ui-state-hover");},
@@ -228,7 +154,7 @@ $(function() {
       }
     })
     .mouseup(function() {
-      //$(this).removeClass("ui-state-active");
+      //$(this).removeClass("ui-state-active"); should be when the animation stops
     })
     .click(function() {
       if (playing == false) {
