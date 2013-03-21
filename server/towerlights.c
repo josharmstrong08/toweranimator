@@ -81,7 +81,7 @@ void tl_send_animationlist(struct mg_connection *conn) {
   root = json_object();
   json_object_set_new(root, "type", json_string("animationlist"));
   array = json_array(); 
-  free(animations);
+  //free(animations);
 
   // Goal: Each folder in the specified animations folder holds an animation and it's music. 
   // Enumerate all the animations their music files

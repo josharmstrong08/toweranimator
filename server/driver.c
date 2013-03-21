@@ -11,12 +11,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <math.h>
 
 #define DS  11
 #define OE  12
 #define ST_CP 13
-#define SH_CP 14
+#define SH_CP 9
 #define MR  15
 
 #define LATCHPIN ST_CP
@@ -47,7 +47,7 @@ static void leds_select(uint32_t group) {
   digitalWrite(LATCHPIN, LOW);
   digitalWrite(CLOCKPIN, LOW);
   //delayMicroseconds(100);
-  for (i = 0; i < 16; i++) {
+  for (i = 0; i < 24; i++) {
     digitalWrite(DATAPIN, group & 0x000001);
     //delayMicroseconds(100);
     digitalWrite(CLOCKPIN, LOW);
@@ -81,7 +81,9 @@ void leds_setup() {
   digitalWrite(OE, LOW);
   digitalWrite(MR, HIGH);
 
-  leds_select(0x0000);
+  leds_select(0x000000);
+
+  pthread_mutex_init(&stoplock, NULL);
 }
 
 /**
@@ -98,19 +100,20 @@ static void outputFrame(unsigned int data[10][4][3]) {
 
   for (multiplier = 0; multiplier < 8; multiplier++) {
     currentbit = 1 << multiplier;
-    redoutput = 0;
-    greenoutput = 0;
-    blueoutput = 0;
 
     int row, col;
     for (row = 0; row < 10; row += 2) {
+      redoutput = 0;
+      greenoutput = 0;
+      blueoutput = 0;
+
       for (col = 0; col < 4; col++) { 
-        redoutput |= (((gamma_table[data[row][col][0]] & currentbit) == currentbit) << col);
-        redoutput |= (((gamma_table[data[row+1][col][0]] & currentbit) == currentbit) << (col+4));
-        greenoutput |= (((gamma_table[data[row][col][1]] & currentbit) == currentbit) << col);
+        redoutput   |= (((gamma_table[data[row]  [col][0]] & currentbit) == currentbit) << col);
+        redoutput   |= (((gamma_table[data[row+1][col][0]] & currentbit) == currentbit) << (col+4));
+        greenoutput |= (((gamma_table[data[row]  [col][1]] & currentbit) == currentbit) << col);
         greenoutput |= (((gamma_table[data[row+1][col][1]] & currentbit) == currentbit) << (col+4));
-        blueoutput |= (((gamma_table[data[row][col][2]] & currentbit) == currentbit) << col);
-        blueoutput |= (((gamma_table[data[row+1][col][2]] & currentbit) == currentbit) << (col+4));
+        blueoutput  |= (((gamma_table[data[row]  [col][2]] & currentbit) == currentbit) << col);
+        blueoutput  |= (((gamma_table[data[row+1][col][2]] & currentbit) == currentbit) << (col+4));
       }
      
       leds_select(redoutput << 16);
@@ -145,12 +148,31 @@ int leds_openAnimation(char *filename) {
 
   char buffer[1024];
   int i;
+  int version;
 
-  // Read in the first four lines of pallette information
-  for (i = 0; i < 4; i++) {
-    if (fgets(buffer, 1024, file) == NULL) {
-      printf("Error: Couldn't read file\n");
-      return 2;
+  // Read in the version 
+  if (fgets(buffer, 1024, file) == NULL) {
+    printf("Error: Couldn't read file\n");
+    return 2;
+  } else {
+    double v = strtod(buffer, NULL);
+    if (fabs(v - 0.2) < 0.0001) {
+      version = 2;
+    } else if (fabs(v - 0.3) < 0.0001) {
+      version = 3;
+    } else {
+      fprintf(stderr, "File version is not supported\n");
+      return 4;
+    }
+  }
+
+  if (version == 3) {
+    // Read in the first four lines of pallette information
+    for (i = 0; i < 3; i++) {
+      if (fgets(buffer, 1024, file) == NULL) {
+        printf("Error: Couldn't read file\n");
+        return 2;
+      }
     }
   }
   
@@ -174,18 +196,47 @@ int leds_openAnimation(char *filename) {
   int min;
   float sec;
   int time;
+  int currenttime = 0;
   memset(animation, 0, sizeof(unsigned int[10][4][3]) * framecount);
   for (frameindex = 0; frameindex < framecount; frameindex++) {
-    if (fscanf(file, "%i:%f", &min, &sec) != 2) {
-      printf("Failed to read time\n");
+    if (version == 2) {
+      if (fscanf(file, "%f", &sec) != 1) {
+        printf("Failed to read time\n");
+      }
+      time = currenttime + (int)(sec * 1000);
+      currenttime = time;
+    } else if (version == 3) {
+      if (fscanf(file, "%i:%f", &min, &sec) != 2) {
+        printf("Failed to read time\n");
+      }
+      time = min * 60 * 1000 + (int)(sec * 1000);
     }
-    time = min * 60 * 1000 + (int)(sec * 1000);
+
     framedeltas[frameindex] = time;
 
     for (row = 0; row < height; row++) {
       for (col = 0; col < width; col++) {
-        fscanf(file, "%u %u %u", &(animation[frameindex][row][col][0]), &(animation[frameindex][row][col][1]), &(animation[frameindex][row][col][2]));
+        if (version == 2) {
+          unsigned int value;
+          fscanf(file, "%u", &value);
+          value = value == 1 ? 255 : 0;
+          animation[frameindex][row][col][0] = value;
+          animation[frameindex][row][col][1] = value;
+          animation[frameindex][row][col][2] = value;
+        } else if (version == 3) {
+          fscanf(file, "%u %u %u", &(animation[frameindex][row][col][0]), &(animation[frameindex][row][col][1]), &(animation[frameindex][row][col][2]));
+        }
       }
+    }
+  }
+
+  for (frameindex = 0; frameindex < 3; frameindex++) {
+    printf("Frame %i:\n", frameindex);
+    for (row = 0; row < 10; row++) {
+      for (col = 0; col < 4; col++) {
+        printf("<%i,%i,%i> ", animation[frameindex][row][col][0], animation[frameindex][row][col][0], animation[frameindex][row][col][0]);
+      }
+      printf("\n");
     }
   }
 
@@ -225,9 +276,10 @@ static void *leds_play_helper(void *param) {
 
   outputFrame(animation[frameindex]);
     
-  leds_select(0x0000);
-  leds_select(0x0007);
-  leds_select(0x0000);
+  printf("animation done playing\n");
+  leds_select(0x000000);
+  leds_select(0x00ffff);
+  leds_select(0x000000);
 
   pthread_exit(NULL);
 }

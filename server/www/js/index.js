@@ -8,6 +8,8 @@ $(function() {
   var animations = [];
   var isAudioDoneLoading = false;
   var isVideoDoneLoading = false;
+  var isAudioDonePlaying = true;
+  var isVideoDonePlaying = true;
   var readyToPlay = false;
   var playing = false;
   var currentAnimation = null;
@@ -19,6 +21,7 @@ $(function() {
    */
   var animationDoneLoading = function() {
     $("#currentanimationtitle").text(currentAnimation.title);
+    console.log("Animation done loading: Audio: " + isAudioDoneLoading + ", Video: " + isVideoDoneLoading);
 
     if (isAudioDoneLoading == true && isVideoDoneLoading == true) {
       readyToPlay = true;
@@ -32,7 +35,22 @@ $(function() {
       $("#playbutton").addClass("ui-state-disabled");
       //playing = false;
     }
-  }
+  };
+
+  animationDonePlaying = function() {
+    if (isAudioDonePlaying == true && isVideoDonePlaying == true) {
+      readyToPlay = true;
+      $("#playbutton").removeClass('ui-state-disabled');
+      $("#currentanimationpos").progressbar('option', 'max', $("#audioplayer")[0].duration);
+      $("#currentanimationpos").progressbar('value', 0);
+      console.log("Load the next animation");
+    } else {
+      $("#currentanimationpos").progressbar('value', false);
+      $("#playbutton span").removeClass('ui-icon-stop');
+      $("#playbutton span").addClass('ui-icon-play');
+      $("#playbutton").addClass("ui-state-disabled");
+    }
+  };
 
   /** 
    * Initialize the audio and video loading
@@ -43,8 +61,15 @@ $(function() {
     isAudioDoneLoading = false;
     isVideoDoneLoading = false;
     websocket.send(JSON.stringify({type:"load", index: animations.indexOf(currentAnimation)}));
-    $('#audioplayer').attr('src', currentAnimation.music);
-    $('#audioplayer')[0].load();
+    console.log("Loading music: " + currentAnimation.music);
+    if (currentAnimation.music == undefined) {
+      isAudioDoneLoading = true;
+      $('#audioplayer').attr('src', '');
+      animationDoneLoading();
+    } else {
+      $('#audioplayer').attr('src', currentAnimation.music);
+      $('#audioplayer')[0].load();
+    }
   };
   
   // Websocket ----------------------------------------------------------
@@ -53,9 +78,11 @@ $(function() {
   };
   websocket.onclose = function(ev) {
     $("#serverstatus").text("Disconnected");
+    alert("Server disconnected");
   };
   websocket.onmessage = function(ev) {
     var msg = JSON.parse(ev.data);
+    console.log("Recieved: " + ev.data);
     switch (msg.type) {
       case 'pong':
         $("#pingdiv").text("Ping... Pong");
@@ -77,6 +104,9 @@ $(function() {
         isVideoDoneLoading = true;
         animationDoneLoading(); 
         break;
+      case 'doneplaying':
+        isVideoDonePlaying = true;
+        animationDonePlaying();
       default:
         alert('Unrecognized server message: ' + ev.data);
         break;
@@ -93,9 +123,11 @@ $(function() {
     .selectable({ 
       tolerance: 'fit',
       selected: function(e,u) {
+        // a new aniimation was selected
         $(u.selected).addClass('ui-state-active'); 
         currentIndex = parseInt(u.selected.id.substring(9, u.selected.id.length), 10)
         if (playing == false) {
+          // If an animation isn't currently playing load the selected one. 
           loadAnimation(currentIndex);
         }
       },
@@ -109,6 +141,7 @@ $(function() {
     .mousedown(function() { $(this).addClass("ui-state-active"); })
     .mouseup(function() { $(this).removeClass("ui-state-active"); })
     .click(function() {
+      readyToPlay = false;
       websocket.send(JSON.stringify({type:"getanimations"})); 
       $("#animationlist").empty();
     });
@@ -127,6 +160,10 @@ $(function() {
   });
   $("#audioplayer").bind('timeupdate', function() {
     $("#currentanimationpos").progressbar('value', $("#audioplayer")[0].currentTime);
+  });
+  $("#audioplayer").bind('ended', function() {
+    isAudioDonePlaying = true;
+    animationDonePlaying();
   });
   $("#playbutton")
     .hover(
@@ -154,8 +191,10 @@ $(function() {
           playing = true;
         }
       } else {
-        $("#audioplayer")[0].pause();
-        $("#audioplayer")[0].currentTime = 0;
+        if (currentAnimation.music != undefined) {
+          $("#audioplayer")[0].pause();
+          $("#audioplayer")[0].currentTime = 0;
+        }
         $("#playbutton span").removeClass('ui-icon-stop');
         $("#playbutton span").addClass('ui-icon-play');
         playing = false;

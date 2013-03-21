@@ -2,8 +2,6 @@
  * towerserver.c
  * Josh Armstrong
  *
- * 
- *
  */
 
 #include "sendmessage.h"
@@ -25,7 +23,7 @@
  *   data, data_len: payload data. Mask, if any, is already applied.
  */
 static int websocket_data_handler(struct mg_connection *conn, int flags, char *data, size_t data_len) {
-  //printf("Recieved: [%.*s]\n", (int) data_len, data);
+  printf("Recieved: [%.*s]\n", (int) data_len, data);
   
   // A variable to hold any errors from jansson
   json_error_t error;
@@ -107,11 +105,12 @@ int main(void) {
   // Start the server
   ctx = mg_start(&callbacks, NULL, options);
   // Wait until user hits "enter"
+  printf("Enter a character to exit:\n");
   getchar();  
   // Stop the server
   mg_stop(ctx);
   // Allow the tower lights to free memory
-  tl_destroy();
+  //tl_destroy();
 
   return 0;
 }
