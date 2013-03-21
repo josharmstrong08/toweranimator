@@ -2,10 +2,13 @@ Tower Animator
 =============
 
 Tower Animator is a web server that runs on a Raspberry Pi connected to the Tower Lights LED driver board. The web page
-that it serves has an audio player for the music and also communicates back to the server to play the video. This is 
-part of the Tower Lights project put on the by the ACM student chapter at the University of Idaho. Tower Lights is a
-project to put a remotely controlled light in each window of a one side of 10 residence hall on campus. See 
-[http://towerlights.uiacm.org/](http://towerlights.uiacm.org/) for more details. 
+that it serves has an audio player for the music and also communicates back to the server to play the video, allowing
+remote control of the tower lights. This is part of the Tower Lights project put on the by the ACM student chapter 
+at the University of Idaho. Tower Lights is a project to put a remotely controlled light in each window of a one side 
+of 10 residence hall on campus. See [http://towerlights.uiacm.org/](http://towerlights.uiacm.org/) for more details. 
+
+Note: A previous incarnation of software used to control the lights based on pc to pc communication is located at 
+[https://code.google.com/p/toweranimator/](https://code.google.com/p/toweranimator/)
 
 Requirements
 ------------
