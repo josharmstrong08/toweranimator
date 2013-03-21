@@ -67,6 +67,7 @@ static int websocket_data_handler(struct mg_connection *conn, int flags, char *d
           tl_play(animationindex, conn);
         } else if (strncmp(msgtype, "stop", 5) == 0) {
           printf("Stopping animation\n");
+          tl_stop(conn);
         } else if (strncmp(msgtype, "load", 5) == 0) {
           int animationindex = json_integer_value(json_object_get(root, "index"));
           printf("Loading animation at index %i\n", animationindex);

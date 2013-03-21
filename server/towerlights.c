@@ -38,6 +38,10 @@ void tl_play(int animationindex, struct mg_connection *conn) {
   leds_play();
 }
 
+void tl_stop(struct mg_connection *conn) {
+  leds_stop();
+}
+
 /**
  * Loads the specified animation into memory
  */

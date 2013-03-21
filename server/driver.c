@@ -6,6 +6,7 @@
 
 #include "gamma.h"
 #include <wiringPi.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -32,10 +33,14 @@ static unsigned int *framedeltas;
 static int framecount = 0;
 static int animationloaded = 0;
 
+static pthread_t animationthread;
+static pthread_mutex_t stoplock;
+static int stop = 0;
+
 /**
  * Selects a specific red, green or blue group.
  */
-static void leds_select(uint16_t group) {
+static void leds_select(uint32_t group) {
   // This function works by shifting out select group  
 
   int i;
@@ -43,7 +48,7 @@ static void leds_select(uint16_t group) {
   digitalWrite(CLOCKPIN, LOW);
   //delayMicroseconds(100);
   for (i = 0; i < 16; i++) {
-    digitalWrite(DATAPIN, group & 0x0001);
+    digitalWrite(DATAPIN, group & 0x000001);
     //delayMicroseconds(100);
     digitalWrite(CLOCKPIN, LOW);
     //delayMicroseconds(100);
@@ -108,14 +113,14 @@ static void outputFrame(unsigned int data[10][4][3]) {
         blueoutput |= (((gamma_table[data[row+1][col][2]] & currentbit) == currentbit) << (col+4));
       }
      
-      leds_select(redoutput << 8);
-      leds_select((redoutput << 8) | (1 << (((row/2)*3) + 0)));
+      leds_select(redoutput << 16);
+      leds_select((redoutput << 16) | (1 << (((row/2)*3) + 0)));
 
-      leds_select(greenoutput << 8);
-      leds_select((greenoutput << 8) | (1 << (((row/2)*3) + 1)));
+      leds_select(greenoutput << 16);
+      leds_select((greenoutput << 16) | (1 << (((row/2)*3) + 1)));
 
-      leds_select(blueoutput << 8);
-      leds_select((blueoutput << 8) | (1 << (((row/2)*3) + 2)));
+      leds_select(blueoutput << 16);
+      leds_select((blueoutput << 16) | (1 << (((row/2)*3) + 2)));
     }
       
     delayMicroseconds(BCM_PERIOD << multiplier);
@@ -193,40 +198,51 @@ int leds_openAnimation(char *filename) {
  * Stops a playing animation, if any.
  */
 void leds_stop() {
-  
+  pthread_mutex_lock(&stoplock);
+  stop = 1;
+  pthread_mutex_unlock(&stoplock);  
+}
+
+static void *leds_play_helper(void *param) {
+  unsigned int starttime = millis();
+  int frameindex = 0;
+
+  while (frameindex < framecount-1) {
+    pthread_mutex_lock(&stoplock);
+    if (stop == 1) {
+      stop = 0;
+      pthread_mutex_unlock(&stoplock);
+      break;
+    }
+    pthread_mutex_unlock(&stoplock);
+
+    outputFrame(animation[frameindex]);
+
+    if (millis() - starttime > framedeltas[frameindex+1]) {
+      frameindex++;
+    }
+  }
+
+  outputFrame(animation[frameindex]);
+    
+  leds_select(0x0000);
+  leds_select(0x0007);
+  leds_select(0x0000);
+
+  pthread_exit(NULL);
 }
 
 /**
  * Plays the currently loaded animation.
  */
 void leds_play() {
-  unsigned int starttime = millis();
-  int frameindex = 0;
+  pthread_mutex_lock(&stoplock);
+  stop = 0;
+  pthread_mutex_unlock(&stoplock);
 
-  while (frameindex < framecount-1) {
-    outputFrame(animation[frameindex]);
-    if (millis() - starttime > framedeltas[frameindex+1]) {
-      frameindex++;
-    }
+  if (pthread_create(&animationthread, NULL, leds_play_helper, NULL) != 0) {
+    // couldn't create the thread
+    fprintf(stderr, "Couldn't create the animation thread\n");
   }
-  outputFrame(animation[frameindex]);
-    
-  leds_select(0x0000);
-  leds_select(0x0007);
-  leds_select(0x0000);
 }
-
-/*
-int main(int argc, char **argv) {
-  pid_t childPID = fork();
-  if (childPID == 0) {
-    char cmd[1024];
-    snprintf(cmd, 1024, "aplay %s", argv[2]);
-    system(cmd);
-  } else {
-    
-  }
-  return 0;
-}
-*/
 
