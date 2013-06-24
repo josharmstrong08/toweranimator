@@ -107,7 +107,7 @@ static void outputFrame(unsigned int data[10][4][3]) {
       greenoutput = 0;
       blueoutput = 0;
 
-      for (col = 0; col < 4; col++) { 
+      for (col = 0; col < 4; col++){ 
         redoutput   |= (((gamma_table[data[row]  [col][0]] & currentbit) == currentbit) << col);
         redoutput   |= (((gamma_table[data[row+1][col][0]] & currentbit) == currentbit) << (col+4));
         greenoutput |= (((gamma_table[data[row]  [col][1]] & currentbit) == currentbit) << col);
