@@ -226,8 +226,11 @@ int main(void)
 
 }  // END main
 
+
+/* Helicopter does a signle bright light in front on full brightness, this light
+	then runs in a loop like a single helicopter blade */ 
 void helicopter(int nrooms){
-	int i, j;
+	int i;
 	uint8_t speed = 800;
 		
 	for( i = 0; i < nrooms; i++ ){
@@ -242,3 +245,46 @@ void helicopter(int nrooms){
 	}
 	
 }
+
+
+/* colorCopter does the same as helicopter ( a racing light in a loop)
+   except the lead light is white and the trailing lights are in decending
+   order so it goes White->Blue->Yellow->Red->Off. Kinda like the leading
+   light is white hot and cooling off from there. */
+void colorCopter( int nrooms ){
+	int i;
+	uint8_t speed = 800;
+
+	for( i = 0; i < nrooms; i++ ){
+		cyclecnt++;
+		PORTC = ~cyclecnt;
+		outroom( i, 255, 255, 255 );
+		outroom( i-1, 0, 0, 166 );
+		outroom( i-2, 83, 83, 0 );
+		outroom( i-3, 45, 0, 0 );
+		outroom( i-4, 0, 0, 0 );
+		newframe();
+		delay( speed );
+	}
+}
+
+// TODO finish up multicopter, will have multiple running lights
+// I need to think of a way to effectivly calculate where the opposite
+// lightbar is if the system is in a loop layout.
+/*
+void multiCopter( int nrooms ){
+	int i, j;
+	uint8_t speed = 800;
+	
+	for( i = 0; i < nrooms; i++ ){
+		cyclecnt++;
+		PORTC = ~cyclecnt;
+		outroom( i, 255, 255, 255 );
+		outroom( j, 255, 255, 255 );	
+		outroom( i-1, 116, 116, 116 );	
+		outroom( j-2, 116, 116, 116 );
+		outroom( i-2, 50, 50, 59 );
+		outroom( i-3, 0, 0, 0);
+		newframe();
+	}
+} */
