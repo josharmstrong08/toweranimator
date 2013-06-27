@@ -1,2 +1,2 @@
 all:
-	gcc Jordanlights.c -o tower.out 
+	gcc dynamiclights.c -o tower.out 
