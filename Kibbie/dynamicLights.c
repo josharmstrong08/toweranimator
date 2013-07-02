@@ -14,13 +14,14 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <inttypes.h>
 
 struct lightBar{
 	
-	int red;
-	int green;
-	int blue;
+	uint8_t red;
+	uint8_t green;
+	uint8_t blue;
+	int position;
 	
 	struct lightBar *next;
 };
@@ -31,9 +32,10 @@ struct lightBar *root = NULL;
 
 // Prototypes
 void addToLL( struct lightBar *ptr );
-void newLightBar();
+void newLightBar( int route );
 void shutDown();
 void printList();
+void deleteBars( int barNum );
 
 int main(){
 	int i;
@@ -41,24 +43,58 @@ int main(){
 	// device entering the network.
 	
 	// Simulated scan and new device is found.
+	// right now there are 5 different 'routes' being run.
 	for( i = 0; i < 5; i++ ){
-		newLightBar();
-		printf("light bar created!\n");
+		newLightBar( i );
+		printf("light bar created\n");
 	}
 	printf("printing list\n");	
+	// Show deleteBars works.	
 	printList();	
-		
+
+	// Now to simulate a lightbar leaving the zigbee network
+	// this given bar was apart of route 4.
+	deleteBars( 4 );	
+	// Show deleteBars works.
+	printList();
 	
 return 0;
 }
 
+// Simple function to remove a lighbar from linked list that is found by it's route #
+// This is delete all bars of the route so all of route 5 would be removed.
+void deleteBars( int barNum ){
+	struct lightBar *curr;
+	struct lightBar *prev;
+
+	curr = root;
+	prev = curr;
+	printf("Searching through list to delete node...\n");
+	while ( curr != NULL ){
+		// handle case where we need to move the root ahead.
+		if( curr == root && curr->position == barNum ){
+			root = root->next; // advance the root
+			free(curr); // let it go, you just gotta.
+		}
+		else if( curr->position == barNum ){
+			prev->next = curr->next; // remove curr from list.
+			free(curr); // let it go.
+		}
+		
+		prev = curr;
+		curr = curr->next; // advance down list.
+	}
+	printf("Bar(s) removed || didn't exist\n");
+}	
+				
+		
 // Simple function to print the current LL
 void printList(){
 	struct lightBar *curr; // Conductor to traverse list
 
 	curr = root;
-	while( curr->next != NULL ){
-		printf("current value %d\n", curr->red);
+	while( curr != NULL ){
+		printf("current value %d\n", curr->position);
 		curr = curr->next;	
 	}
 }
@@ -72,8 +108,11 @@ void printList(){
 	could possibly be put into a linked list and a Binary Search Tree per say. This is
 	why I usually build my data structures like this.
 
+	The variable 'route' is passed in is the route that is being run on say a field like
+	in football, each route number that is the same will recieve the same data. So all
+	route 3 bars would do the same pattern while all route 1 bars could do a different pattern.
 */
-void newLightBar(){
+void newLightBar( int route ){
 	// Ued to traverse list
 	struct lightBar *curr;
 
@@ -86,7 +125,7 @@ void newLightBar(){
 	ptr->green = 0;
 	ptr->blue = 0;
 	ptr->next = NULL;
-	
+	ptr->position = route;	
 	/* From here you can now push the new lightbar's information to it
 	  out onto the network and it will be accurate so you could call a
 	  function here to do so and it would update nodes outside of the LL.
