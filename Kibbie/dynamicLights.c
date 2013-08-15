@@ -12,9 +12,13 @@
 	list, there is only a head pointer currently but a tail could be
 	added if it's needed for some reason.
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+//#include <avr/pgmspace.h>
+//#include <avr/interrupt.h>
+//#include "twrlights.h"
 
 struct lightBar{
 	
@@ -29,6 +33,7 @@ struct lightBar{
 // Globals:
 // root will be global for now
 struct lightBar *root = NULL;
+int position = 0;
 
 // Prototypes
 void addToLL( struct lightBar *ptr );
@@ -171,14 +176,19 @@ void addToLL( struct lightBar *ptr ){
 	 shut off all light bars in the network.
 */
 void shutDown(){
+	int i = 0;
 	// curr is used to traverse and shut down LL
 	struct lightBar *curr = root; // start at the begining of list 
-	while( curr->next != NULL ){
+	for( i = 0; curr->next != NULL; i++ ){
 		curr->red = 0; // set all colors to the 'off' position.
 		curr->green = 0;
 		curr->blue = 0;
+		//outroom( curr->position, curr->red, curr->green, curr->blue );	
+		//newframe();
 		curr = curr->next; // advance to next node.
 	}
+	
+	
 	// All lights should be turned off! 
 	// ... but I have a feeling I forgot something...
 }
