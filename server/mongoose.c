@@ -470,7 +470,7 @@ static const char *config_options[] = {
   "run_as_user", NULL,
   "url_rewrite_patterns", NULL,
   "hide_files_patterns", NULL,
-  "request_timeout_ms", "30000",
+  "request_timeout_ms", "300000",
   NULL
 };
 
