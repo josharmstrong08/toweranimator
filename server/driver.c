@@ -134,7 +134,8 @@ static void outputFrame(unsigned int data[10][4][3]) {
 
 /** 
  * Reads a .tan file and saves the contents to memory. It can
- * then be played with the play() function.
+ * then be played with the play() function. The file that is called
+ * and loaded is done when the user clicks on the song name on the webpage.
  */
 int leds_openAnimation(char *filename) {
   animationloaded = 0;
