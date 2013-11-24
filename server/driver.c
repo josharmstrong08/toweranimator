@@ -4,7 +4,6 @@
  */
 
 
-
 #include "gamma.h"
 #include <wiringPi.h>
 #include <pthread.h>
@@ -61,6 +60,7 @@ static void leds_select(uint32_t group) {
   }
   digitalWrite(LATCHPIN, HIGH);
   //delayMicroseconds(100);
+	
 }
 
 
