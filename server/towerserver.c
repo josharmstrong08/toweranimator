@@ -2,6 +2,7 @@
  * towerserver.c
  * Josh Armstrong
  *
+ * Edited by: Jordan Lynn
  */
 
 #include "sendmessage.h"

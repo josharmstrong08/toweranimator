@@ -1,5 +1,6 @@
 /**
- *
+ * towerlights.c
+ * Edited by: Jordan Lynn
  */
 
 #include "towerlights.h"

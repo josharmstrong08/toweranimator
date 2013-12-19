@@ -1,6 +1,6 @@
 /**
  * driver.c
- *
+ * Jordan Lynn
  */
 
 
@@ -60,6 +60,7 @@ static void leds_select(uint32_t group) {
   }
   digitalWrite(LATCHPIN, HIGH);
   //delayMicroseconds(100);
+	
 }
 
 
@@ -107,7 +108,7 @@ static void outputFrame(unsigned int data[10][4][3]) {
       greenoutput = 0;
       blueoutput = 0;
 
-      for (col = 0; col < 4; col++) { 
+      for (col = 0; col < 4; col++){ 
         redoutput   |= (((gamma_table[data[row]  [col][0]] & currentbit) == currentbit) << col);
         redoutput   |= (((gamma_table[data[row+1][col][0]] & currentbit) == currentbit) << (col+4));
         greenoutput |= (((gamma_table[data[row]  [col][1]] & currentbit) == currentbit) << col);
@@ -134,7 +135,8 @@ static void outputFrame(unsigned int data[10][4][3]) {
 
 /** 
  * Reads a .tan file and saves the contents to memory. It can
- * then be played with the play() function.
+ * then be played with the play() function. The file that is called
+ * and loaded is done when the user clicks on the song name on the webpage.
  */
 int leds_openAnimation(char *filename) {
   animationloaded = 0;
